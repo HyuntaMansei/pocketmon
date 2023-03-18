@@ -11,12 +11,14 @@ drop table pokemon_evol_tb;
 drop table if exists pokemon_info_tb;
 create table pokemon_info_tb (
  id int AUTO_INCREMENT,
- `이름` char(50),
- `번호`char(4),
+ `포케몬넘버`char(5),
+ `포케몬이름` char(50),
+ `이미지url` char(100),
  `타입1`char(20),
  `타입2`char(20),
  `단일타입` char(2),
- `진화 비용`char(10),
+ `진화사탕` char(100),
+ `진화비용`char(10),
  `최대 CP` int,
  `공격력` int,
  `방어력` int,
@@ -40,7 +42,7 @@ create table pokemon_info_tb (
  `드래곤` float,
  `악` float,
  `페어리` float,
- `단계` int,
+ `진화단계` int,
  `최종진화` char(2),
   primary key(id),
   unique key(이름)
