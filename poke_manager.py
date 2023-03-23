@@ -7,6 +7,8 @@ from android_manager import Android_device
 class Poke_device(Android_device):
     def __init__(self, device: ppadb.device.Device) -> None:
         super().__init__(device)
+        self.default_sleeping_time = 0.7
+        self.sleeping_time = self.default_sleeping_time
 
     # 포케몬 기초 함수
     def click_bottom_center(self):
@@ -145,3 +147,42 @@ class Poke_device(Android_device):
             time.sleep(2)
             self.click_bottom_center()
         self.click_bottom_center()
+
+    #포케몬 교환하기
+    def exchange(self, device: ppadb.device.Device, iter_num=1):
+        """다른 하나의 Device를 받아와서 교환을 진행한다.
+        교환창이 열려져 있는 상태에서 시작
+        :param device: 교환을 진행할 다른 디바이스 클래스
+        :return: None
+        """
+        # 대기시간 0으로 설정
+        self.sleeping_time = 0
+        # 한글 입력을 위한 키보드 설정
+        dev_s8.device.shell("ime set com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME")
+
+        for i in range(iter_num):
+            # 첫번째 몬스터 클릭
+            self.tap_xy(198, 734)
+            device.tap_xy(198, 734)
+            time.sleep(1)
+            # NEXT
+            self.tap_xy(540, 1700)
+            device.tap_xy(540, 1700)
+            time.sleep(5)
+            # Confirm
+            self.tap_xy(99, 1068)
+            device.tap_xy(99, 1068)
+            time.sleep(20)
+            # 교환완료 후 다시 교환준비
+            self.click_bottom_center()
+            device.click_bottom_center()
+            time.sleep(5)
+            # 교환클릭
+            self.tap_xy(904, 1604)
+            device.tap_xy(904, 1604)
+            time.sleep(5)
+            print(f'{i+1}회 교환완료')
+        #대기시간 원래대로
+        self.sleeping_time = self.default_sleeping_time
+        #본래 키보드로 변경
+        # dev_s8.device.shell("ime set com.sec.android.inputmethod.beta/com.sec.android.inputmethod.SamsungKeypad")

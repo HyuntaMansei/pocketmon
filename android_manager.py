@@ -8,6 +8,7 @@ class Android_device:
         pass
         self.device = device
         self.snum = device.get_serial_no()
+        self.sleeping_time = 0.5
 
         if self.snum == 'ce10171ab2312a0d04':
             self.window_text = 'SM-G950N'  # G8
@@ -31,37 +32,38 @@ class Android_device:
     def press_home(self):
         cmd = 'input keyevent KEYCODE_HOME'
         self.device.shell(cmd)
-        time.sleep(0.8)
+        time.sleep(self.sleeping_time)
 
     # 뒤로가기 누르기
     def press_back(self):
         cmd = 'input keyevent KEYCODE_BACK'
-        print(cmd)
+        # print(cmd)
         self.device.shell(cmd)
-        time.sleep(0.8)
+        time.sleep(self.sleeping_time)
 
     def tap_xy(self, x: int, y: int):
         cmd = f'input touchscreen tap {x} {y}'
-        print(cmd)
+        # print(cmd)
         self.device.shell(cmd)
-        time.sleep(0.8)
+        time.sleep(self.sleeping_time)
+        print(self.sleeping_time)
 
     def swipe_xy_xy(self, xSrc, ySrc, xDes, yDes, duration=200):
         cmd = f'input swipe {xSrc} {ySrc} {xDes} {yDes} {duration}'
-        print(cmd)
+        # print(cmd)
         self.device.shell(cmd)
-        time.sleep(0.8)
+        time.sleep(self.sleeping_time)
 
     def swipe_down(self, rep=1, dy=1500, duration=200):
         xSrc = 1000
         ySrc = 1900
         yDes = ySrc - dy
         for i in range(rep):
-            self.swipe_xy_xy(xSrc, ySrc, xSrc, yDes)
+            self.swipe_xy_xy(xSrc, ySrc, xSrc, yDes, duration=duration)
 
     def swipe_up(self, rep=1, dy=1500, duration=200):
         xSrc = 1000
         ySrc = 200
         yDes = ySrc + dy
         for i in range(rep):
-            self.swipe_xy_xy(xSrc, ySrc, xSrc, yDes)
+            self.swipe_xy_xy(xSrc, ySrc, xSrc, yDes, duration=duration)
