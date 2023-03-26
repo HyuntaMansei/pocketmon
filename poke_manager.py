@@ -2,15 +2,19 @@ import win32gui
 import ppadb
 from ppadb.client import Client as AdbClient
 import time
+
+import android_manager
 from android_manager import Android_device
 
 class Poke_device(Android_device):
     def __init__(self, device: ppadb.device.Device) -> None:
         super().__init__(device)
         self.default_sleeping_time = 0.7
-        self.sleeping_time = self.default_sleeping_time
+        self.sleeping_time = self .default_sleeping_time
 
     # 포케몬 기초 함수
+    def poke_back_click(self):
+        self.tap_xy(545, 1900)
     def click_bottom_center(self):
         # 아래중앙 클릭
         self.tap_xy(545, 1900)
@@ -37,14 +41,58 @@ class Poke_device(Android_device):
         self.tap_xy(918, 1934)
         # 이름순 클릭
         self.tap_xy(945, 966)
-
-    def sort_get_present(self):
-        # 소팅리셋
-        self.sort_reset()
+    def get_friend_sort_state(self)->str:
+        """
+        친구화면에서 소팅 상태 리턴
+        :return: present_desc, present_asc, present_other, none의 문자열로 리턴
+        """
+        if self.locate_center('sort_present_desc') != None:
+            return 'present_desc'
+        elif self.locate_center('sort_present_asc') != None:
+            return 'present_asc'
+        elif self.locate_center('sort_present_other') != None:
+            return 'present_other'
+        else:
+            #선물소팅 상태가 아닌 경우
+            return 'none'
+    def set_present_desc(self):
+        """
+        친구 화면상태에서, 선물 받기 정렬
+        return: 실패하면 False
+        """
         # 소팅 클릭
         self.tap_xy(918, 1934)
-        # 선물받기순 클릭
-        self.tap_xy(928, 1536)
+        # desc면 리셋 하기
+        state = self.get_friend_sort_state()
+        if 'desc' in state:
+            # 이름순 클릭
+            self.tap_xy(945, 966)
+            # 소팅 클릭
+            self.tap_xy(918, 1934)
+            # 선물받기순 클릭
+            self.tap_xy(928, 1536)
+        elif 'asc' in state:
+            # 선물받기순 클릭
+            self.tap_xy(928, 1536)
+        elif 'none' in state:
+            # 선물받기순 클릭
+            self.tap_xy(928, 1536)
+            # 소팅 클릭
+            self.tap_xy(918, 1934)
+            state2 = self.get_friend_sort_state()
+            if 'desc' in state2:
+                # 내림차순 정렬인 경우
+                # 소팅 클릭
+                self.tap_xy(918, 1934)
+            else:
+                # 오름차순 정렬인 경우
+                # 선물받기순 클릭
+                self.tap_xy(928, 1536)
+        else:
+            return False
+        return True
+        # asc면 desc로 변경
+        # none면 선물 클릭 후 desc인지 확인
 
     def sort_send_present(self):
         # 소팅리셋
@@ -56,7 +104,16 @@ class Poke_device(Android_device):
 
     def first_profile_click(self):
         self.tap_xy(378, 839)
-
+    def first_pokemon_click(self):
+        self.tap_xy(200, 756)
+    def evolve_pokemon_click(self):
+        self.tap_xy(282, 1810)
+    def evolve_pokemon_click(self):
+        #evolve
+        self.tap_xy(282, 1810)
+        time.sleep(1)
+        #yes
+        self.tap_xy(519,1240)
     # 포케몬 전용 함수
     def log_out(self):
         self.click_bottom_center()
@@ -111,10 +168,9 @@ class Poke_device(Android_device):
         self.click_profile()
         # 프렌드 클릭
         self.click_friend()
-
         for n in range(iter_num):
             # 선물받기 소팅
-            self.sort_get_present()
+            self.set_present_desc()
             # 위에서 첫번째 받을 선물 클릭
             self.first_profile_click()
             # 선물클릭 클릭
@@ -149,40 +205,56 @@ class Poke_device(Android_device):
         self.click_bottom_center()
 
     #포케몬 교환하기
-    def exchange(self, device: ppadb.device.Device, iter_num=1):
+    def exchange(self, other_device:android_manager.Android_device, iter_num=1):
         """다른 하나의 Device를 받아와서 교환을 진행한다.
         교환창이 열려져 있는 상태에서 시작
         :param device: 교환을 진행할 다른 디바이스 클래스
         :return: None
         """
         # 대기시간 0으로 설정
-        self.sleeping_time = 0
+        self.set_sleeping_time(0)
+        other_device.set_sleeping_time(0)
+
         # 한글 입력을 위한 키보드 설정
-        dev_s8.device.shell("ime set com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME")
+        # other.device.shell("ime set com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME")
 
         for i in range(iter_num):
             # 첫번째 몬스터 클릭
             self.tap_xy(198, 734)
-            device.tap_xy(198, 734)
+            other_device.tap_xy(198, 734)
             time.sleep(1)
             # NEXT
             self.tap_xy(540, 1700)
-            device.tap_xy(540, 1700)
+            other_device.tap_xy(540, 1700)
             time.sleep(5)
             # Confirm
             self.tap_xy(99, 1068)
-            device.tap_xy(99, 1068)
+            other_device.tap_xy(99, 1068)
             time.sleep(20)
             # 교환완료 후 다시 교환준비
             self.click_bottom_center()
-            device.click_bottom_center()
+            other_device.click_bottom_center()
             time.sleep(5)
             # 교환클릭
             self.tap_xy(904, 1604)
-            device.tap_xy(904, 1604)
+            other_device.tap_xy(904, 1604)
             time.sleep(5)
             print(f'{i+1}회 교환완료')
         #대기시간 원래대로
-        self.sleeping_time = self.default_sleeping_time
+        self.back_to_prev_sleeping_time()
+        other_device.back_to_prev_sleeping_time()
+
         #본래 키보드로 변경
-        # dev_s8.device.shell("ime set com.sec.android.inputmethod.beta/com.sec.android.inputmethod.SamsungKeypad")
+        # other.device.shell("ime set com.sec.android.inputmethod.beta/com.sec.android.inputmethod.SamsungKeypad")
+
+    def evolve_pokemon(self, iter_num=1):
+        """
+        포켓몬 리스트 상태에서 시작
+        :return:
+        """
+        for i in range(iter_num):
+            self.first_pokemon_click()
+            self.evolve_pokemon_click()
+            time.sleep(22)
+            self.poke_back_click()
+            print(f"{i+1}번째 포켓몬이 진화했다")
