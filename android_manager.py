@@ -1,12 +1,21 @@
 import win32gui
+import win32api
+import win32con
 import ppadb
 from ppadb.client import Client as AdbClient
 import pyautogui
 import time
 import os
 from pathlib import Path
+
+def tuple_plus(a:tuple, b:tuple):
+    result = tuple([a[i]+b[i] for i in range(len(a))])
+    return result
+def tuple_minus(a:tuple, b:tuple):
+    result = tuple([a[i]-b[i] for i in range(len(a))])
+    return result
 class Android_device:
-    def __init__(self, device: ppadb.device.Device) -> None:
+    def __init__(self, device: ppadb.device.Device, order_of_device=1) -> None:
         pass
         self.device = device
         self.snum = device.get_serial_no()
@@ -17,22 +26,21 @@ class Android_device:
         self.confidence = 0.9
         self.waiting_time = 3
         self.status = 'initial'
+        self.order_of_device = order_of_device
 
         if self.snum == 'ce10171ab2312a0d04':
             self.window_text = 'SM-G950N'  # G8
             self.set_hwnd(self.window_text)
-            if pyautogui.size()[0] > 1920:
-                self.move_window_by_xyxy(2886, 1002)
-            else:
-                self.move_window_by_xyxy(936, 1002)
+            self.resize(self.order_of_device)
 
         elif self.snum == 'ce071717d4035622047e':
             self.window_text = 'SM-N950N'  # Note8
             self.set_hwnd(self.window_text)
-            if pyautogui.size()[0] > 1920:
-                self.move_window_by_xyxy(2886+492, 1002)
-            else:
-                self.move_window_by_xyxy(936+492, 1002)
+            self.resize(self.order_of_device)
+            # if pyautogui.size()[0] > 1920:
+            #     self.move_window_by_xyxy(2886+492, 1002)
+            # else:
+            #     self.move_window_by_xyxy(960+476, 20)
         print(f"Deviced {self.window_text} is connedted\nHwnd: {self.hwnd}")
 
     def find_hwnd_by_text(self, hwnd, window_text: str):
@@ -51,6 +59,31 @@ class Android_device:
         xy = pyautogui.locateCenterOnScreen(self.get_image_path(img), region=self.get_region(), confidence=self.confidence)
         # print(img, xy)
         return xy
+    def resize(self, order_of_device:int):
+        title_bar_height = win32api.GetSystemMetrics(win32con.SM_CYCAPTION)
+        border_width = win32api.GetSystemMetrics(win32con.SM_CXSIZEFRAME)
+        border_height = win32api.GetSystemMetrics(win32con.SM_CYSIZEFRAME)
+        # 윈도우 상의 frame_size 정확히 계산해야 함. caption에서 border가 붙는지 어떤지.
+        # self.frame_size = (border_width * 2, border_height + title_bar_height)
+        self.frame_size = (border_width * 2, title_bar_height)
+        #실제 디바이스 표현 픽셀
+        self.device_size = tuple(self.shell('wm size').split()[-1].split('x'))
+        self.size_coef = 3
+        #body_size = 윈도우 화면상의 사이즈
+        self.body_size = tuple([int(float(s)/self.size_coef) for s in self.device_size])
+        # self.window_size = tuple([self.frame_size[i] + self.body_size[i] for i in range(2)])
+        self.window_size = tuple_plus(self.frame_size, self.body_size)
+        #모니터 화면 크기 구하기
+        self.monitor_xy = (win32api.GetSystemMetrics(0), win32api.GetSystemMetrics(1))
+        # 디바이스 하나일 경우, 시작점 xy = 화면 사이즈 - 윈도우 사이즈 - (0, 윈도우 작업표시줄 높이)
+        # 디바이스 두개일 경우, 시작점 xy = 화면 사이즈 - 윈도우 사이즈 - (윈도우 x 사이즈, 윈도우 작업표시줄 높이)
+        self.window_xy0 = tuple_plus(tuple_minus(tuple_minus(self.monitor_xy, self.window_size), (self.window_size[0] * (order_of_device-1), 40)), ((self.order_of_device-1)*2*border_width, 0))
+        print(self.window_xy0)
+        # body_xy_0(기준점): window xy(좌측위) + (border w, border h + titlebar h)
+        self.body_xy0 = tuple_plus(self.window_xy0, (border_width, border_height + title_bar_height))
+        # self.body_xy0 = self.window_xy0 + (border_width, border_height + title_bar_height)
+        win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, self.window_xy0[0], self.window_xy0[1], self.window_size[0], self.window_size[1], win32con.WM_SHOWWINDOW)
+        # win32gui.MoveWindow(self.hwnd, self.window_xy0[0], self.window_xy0[1], self.window_size[0], self.window_size[1], True)
     def get_region(self):
         """
         윈도우의 (left, top, width, height) 리턴
@@ -81,8 +114,8 @@ class Android_device:
             width = xyxy[2]-xyxy[0]
             height = xyxy[3]-xyxy[1]
         else:
-            width = self.width
-            height = self.height
+            width = self.window_size[0]
+            height = self.window_size[1]
         win32gui.MoveWindow(self.hwnd, xyxy[0], xyxy[1], width, height, True)
 
     #문자열을 입력 받아서 연관 이미지 탭
@@ -160,7 +193,7 @@ class Android_device:
         for i in range(rep):
             self.swipe_xy_xy(xSrc, ySrc, xSrc, yDes, duration=duration)
     def shell(self, cmd:str):
-        self.device.shell(cmd)
+        return self.device.shell(cmd)
     def set_sleeping_time(self, sleeping_time):
         self.sleeping_time = sleeping_time
     def automation_by_image(self, search_img, device_xy:tuple=None, iter_num=1, target_img=None, cur_status=None, new_status=None, no_click=False):
@@ -211,7 +244,7 @@ class Android_device:
                     #성공한 경우 클릭을 한 후, 새로운 상태를 설정해 준다.
                     print(f"Img: {search_img}, T_img: {target_img}\n"
                           f"Click: {click_xy}(is_tap_xy: {is_tap_xy})")
-                    self.click_xy(click_xy, is_tap_xy)
+                    self.click_xy(click_xy, is_device_xy=is_tap_xy)
                 if new_status is not None:
                     print(f'prev status: {self.status}, new status:{new_status}')
                     self.status = new_status

@@ -7,9 +7,9 @@ import android_manager
 from android_manager import Android_device
 
 class Poke_device(Android_device):
-    def __init__(self, device: ppadb.device.Device) -> None:
-        super().__init__(device)
-        self.default_sleeping_time = 0.7
+    def __init__(self, device: ppadb.device.Device, order_of_device:int=1) -> None:
+        super().__init__(device, order_of_device)
+        self.default_sleeping_time = 0.1
         self.sleeping_time = self .default_sleeping_time
 
     # 포케몬 기초 함수
