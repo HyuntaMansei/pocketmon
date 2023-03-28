@@ -161,26 +161,93 @@ class Poke_device(Android_device):
             time.sleep(13)
             print(f'100골 {n + 1}개 구매함. 남은 선물: {iter_num - n}')
         self.click_bottom_center()
-
+    def set_status_by_image(self):
+        self.prev_status = self.status
+        self.automation_by_image('initial_screen', no_click=True, new_status='initial_screen')
+        self.automation_by_image('profile_me', no_click=True, new_status='profile_me')
+        self.automation_by_image('profile_friend', no_click=True, new_status='profile_friend')
+        self.automation_by_image('present_to_open', no_click=True, new_status='open_present')
+        self.automation_by_image('profile_friend_detail', no_click=True, new_status='profile_friend_detail')
+        print(f'Setting Status: {self.status}, prev_status: {self.prev_status}')
+    def get_status_by_image(self, status_list:list):
+        """
+        status list를 받아와서 현재 화명이 그 상태인지 확인 후, 상태를 변경.
+        :param status_list: 상태 문자열 리스트
+        :return: 변경하는 상태 문자열
+        """
+        for status in status_list:
+            if status.
+            if self.automation_by_image(status, no_click=True, new_status=status):
+                return status
+        return 'none'
     # 선물 열기
-    def open_present(self, iter_num: int = 1):
-        # 프로필 클릭
-        self.click_profile()
-        # 프렌드 클릭
-        self.click_friend()
-        for n in range(iter_num):
-            # 선물받기 소팅
-            self.set_present_desc()
-            # 위에서 첫번째 받을 선물 클릭
-            self.first_profile_click()
-            # 선물클릭 클릭
-            self.tap_xy(554, 1493)
-            # 연다 클릭
-            self.tap_xy(540, 1693)
-            # 취소 3 연타
-            time.sleep(15)
-            self.click_bottom_center()
-        self.click_bottom_center()
+    def open_present(self, iter_num: int =1):
+        # 선물열기 자동화
+        self.confidence = 0.95
+        self.status = 'initial_screen'
+        profile_xy = (137, 1892)
+        profile_friend_xy = (755, 163)
+        profile_sort_xy = (934, 1921)
+        profile_sort_present_xy = (927, 1534)
+        x_button = (540, 1925)
+        count = 0
+
+        while True:
+            self.prev_status = self.status
+            self.automation_by_image('initial_screen', profile_xy, new_status='profile')
+            self.automation_by_image('profile_me', profile_friend_xy, cur_status='profile',
+                                      new_status='profile_friend')
+            self.automation_by_image('profile_friend', no_click=True, cur_status='profile',
+                                      new_status='profile_friend')
+            if self.status == 'profile_friend' and not self.automation_by_image('present',
+                                                                                  cur_status='profile_friend',
+                                                                                  new_status='open_present'):
+                print("오픈할 선물이 없음")
+                # 선물로 소팅되어 있는 경우 나갔다가 들어옴
+                if self.automation_by_image('profile_friend_sort_present_desc', target_img='profile_friend_x_green',
+                                             new_status='initial'):
+                    pass
+                else:
+                    # 선물로 소팅하기
+                    self.click_xy(profile_sort_xy, is_device_xy=True)
+                    self.click_xy(profile_sort_present_xy, is_device_xy=True)
+                    time.sleep(2)
+                    self.automation_by_image('sort_present_asc')
+            if self.automation_by_image('open_present_complete', device_xy=x_button,
+                                         cur_status='profile_friend_detail'):
+                self.status = 'initial_screen'
+                break
+            self.automation_by_image('present_to_open', cur_status='open_present', confidence=0.7)
+            if self.automation_by_image('open_cmd', new_status='profile_friend_detail'):
+                count += count
+                if count == iter_num:
+                    break
+            self.automation_by_image('exchange_new_record', target_img='x_white', cur_status='profile_friend_detail')
+            self.automation_by_image('profile_friend_detail_x_green', cur_status='profile_friend_detail',
+                                      new_status='profile_friend')
+            self.automation_by_image('initial_seemore', target_img='x_green', new_status='initial')
+            if self.prev_status == self.status:
+                print(f'Status: {self.status}')
+                self.set_status_by_image()
+
+    # def open_present(self, iter_num: int = 1):
+    #     # 프로필 클릭
+    #     self.click_profile()
+    #     # 프렌드 클릭
+    #     self.click_friend()
+    #     for n in range(iter_num):
+    #         # 선물받기 소팅
+    #         self.set_present_desc()
+    #         # 위에서 첫번째 받을 선물 클릭
+    #         self.first_profile_click()
+    #         # 선물클릭 클릭
+    #         self.tap_xy(554, 1493)
+    #         # 연다 클릭
+    #         self.tap_xy(540, 1693)
+    #         # 취소 3 연타
+    #         time.sleep(15)
+    #         self.click_bottom_center()
+    #     self.click_bottom_center()
 
     # 선물 보내기
     def send_present(self, iter_num: int = 1):
@@ -205,6 +272,39 @@ class Poke_device(Android_device):
         self.click_bottom_center()
 
     #포케몬 교환하기
+    def exchange_pokemon2(self, iter_num=1):
+        step_name_list = [
+            "initial_screen",
+        ]
+    def exchange_pokemon(self, iter_num=1):
+        #상태리스트
+        status_list = [
+            'status_initial_screen', 'status_profile_me', 'status_profile_friend_interact',
+            'status_exchange_pokemon_list', 'status_exchange_next', 'status_exchange_confirm',
+            'status_exchange_result_pokemon'
+        ]
+        #명령딕셔너리. 나중에 자동생성하면 좋을 듯
+        cmd_dict = {
+            'cmd_profile_friend_search':"cmd_profile_friend_search",
+            'cmd_profile_friend_search_nickname':"cmd_profile_friend_search_nickname",
+            'cmd_profile_friend_interact_exchange': "cmd_profile_friend_interact_exchange",
+            'cmd_exchange_next': "cmd_exchange_next",
+            'cmd_exchange_result_pokemon': "cmd_exchange_result_pokemon",
+        }
+        self.get_status_by_image(status_list)
+        self.prev_status = self.cur_status
+        ex_count = 0
+        while ex_count <= iter_num:
+            #포켓몬 리스트에서 시작
+            self.automation_by_image('status_exchange_pokemon_list', 'cmd_exchange_pokemon_list', cur_status='status_exchange_pokemon_list', new_status='status_exchange_next')
+            self.automation_by_image('status_exchange_next', 'cmd_exchange_next', cur_status='status_exchange_next', new_status='status_exchange_confirm')
+            self.automation_by_image('cond_exchange_100_cost', 'cmd_exchange_confirm', cur_status='status_exchange_confirm', new_status='status_exchange_result_pokemon')
+            self.automation_by_image('status_exchange_result_pokemon', 'cmd_exchange_result_pokemon', cur_status='status_exchange_result_pokemon', new_status='status_profile_friend_interact')
+            self.automation_by_image('status_profile_friend_interact', 'cmd_profile_friend_interact_exchange', cur_status='status_profile_friend_interact', new_status='status_exchange_pokemon_list')
+            if self.prev_status == self.cur_status:
+                status = self.get_status_by_image(status_list)
+                self.prev_status = self.cur_status
+                self.cur_status = status
     def exchange(self, other_device:android_manager.Android_device, iter_num=1):
         """다른 하나의 Device를 받아와서 교환을 진행한다.
         교환창이 열려져 있는 상태에서 시작

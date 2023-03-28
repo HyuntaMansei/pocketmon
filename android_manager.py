@@ -14,6 +14,12 @@ def tuple_plus(a:tuple, b:tuple):
 def tuple_minus(a:tuple, b:tuple):
     result = tuple([a[i]-b[i] for i in range(len(a))])
     return result
+def tuple_multiple(a:tuple, b):
+    result = tuple([a[i]*b for i in range(len(a))])
+    return result
+def tuple_divide(a:tuple, b):
+    result = tuple([int(a[i]/b) for i in range(len(a))])
+    return result
 class Android_device:
     def __init__(self, device: ppadb.device.Device, order_of_device=1) -> None:
         pass
@@ -25,7 +31,8 @@ class Android_device:
         self.height = 1020
         self.confidence = 0.9
         self.waiting_time = 3
-        self.status = 'initial'
+        self.cur_status = 'initial'
+        self.prev_status = 'initial'
         self.order_of_device = order_of_device
 
         if self.snum == 'ce10171ab2312a0d04':
@@ -84,6 +91,8 @@ class Android_device:
         # self.body_xy0 = self.window_xy0 + (border_width, border_height + title_bar_height)
         win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, self.window_xy0[0], self.window_xy0[1], self.window_size[0], self.window_size[1], win32con.WM_SHOWWINDOW)
         # win32gui.MoveWindow(self.hwnd, self.window_xy0[0], self.window_xy0[1], self.window_size[0], self.window_size[1], True)
+        #화면 어둡게
+        self.shell('settings put system screen_brightness 0')
     def get_region(self):
         """
         윈도우의 (left, top, width, height) 리턴
@@ -166,13 +175,21 @@ class Android_device:
         """
         #디바이스 기준 좌표인지 확인.
         if is_device_xy == True:
+            print(f"Tapping xy: {xy}")
             self.tap_xy(xy[0], xy[1])
         else:
-            #디바이스 기준 좌표로 변경
-            # (x, y, _, _) = self.get_region()
-            # self.tap_xy(xy[0]-x, xy[1]-y)
-            pyautogui.moveTo(xy[0], xy[1])
-            pyautogui.click(xy[0], xy[1])
+            #디바이스 기준 좌표로 변경하여 tap실행.
+            tap_xy = self.screen_xy_to_device_xy(xy)
+            print(f"Tapping xy: {tap_xy}")
+            self.tap_xy(tap_xy[0], tap_xy[1])
+            # pyautogui.moveTo(xy[0], xy[1])
+            # pyautogui.click(xy[0], xy[1])
+    def screen_xy_to_device_xy(self, xy:tuple):
+        # device 좌표로 변환
+        # screen좌표에서 body_xy0를 빼서 상대좌표를 구한 후, coef를 곱하여 계산
+        return tuple_multiple(tuple_minus(xy, self.body_xy0), self.size_coef)
+    def device_xy_to_screen_xy():
+        pass
     def swipe_xy_xy(self, xSrc, ySrc, xDes, yDes, duration=200):
         cmd = f'input swipe {xSrc} {ySrc} {xDes} {yDes} {duration}'
         # print(cmd)
@@ -196,12 +213,13 @@ class Android_device:
         return self.device.shell(cmd)
     def set_sleeping_time(self, sleeping_time):
         self.sleeping_time = sleeping_time
-    def automation_by_image(self, search_img, device_xy:tuple=None, iter_num=1, target_img=None, cur_status=None, new_status=None, no_click=False):
+    def automation_by_image(self, search_img, target=None, device_xy:tuple=None, iter_num=1, target_img=None, cur_status=None, new_status=None, no_click=False, confidence=1):
         """
         이미지를 통해서 자동화실행하는 함수. 화면에 원하는 이미지가 있는지를 확인 후, 이미지가 있으면
         1. 해당 이미지를 클릭, 2. 다른 이미지를 클릭, 3. 좌표를 클릭. 4. 새로운 status 설정.
         단, 현재 status가 만족할 경우에만.
         :param search_img: 찾을 이미지
+        :param target_img: 클릭할 이미지 또는 디바이스 좌표
         :param iter_num: 반복횟수
         :param target_img: 클릭할 이미지. 없으면 찾은 이미지를 클릭
         :param device_xy: 클릭할 좌표(디바이스 기준 좌표)
@@ -210,8 +228,23 @@ class Android_device:
         :param no_click: 클릭하지 않고, 상태만 바꾸고자 할 경우 True로 설정. Target_img가 설정된 경우, Target_img도 찾아야지 성공함.
         :return: True for 찾아서 성공했으면. False 실패시.
         """
+        #target param이 있는경우
+        if target == None:
+            pass
+        elif type(target) == str:
+            target_img = target
+        elif type(target) == tuple:
+            device_xy = target
+        else:
+            print("Wrong type of target")
+            return False
+
+        #confidence 옵션이 있는 경우 변경
+        if confidence != 1:
+            prev_confidence = self.confidence
+            self.confidence = confidence
         # 상태가 만족할 경우에만 검색 수행
-        if (cur_status == None) or (cur_status == self.status):
+        if (cur_status == None) or (cur_status == self.cur_status):
             click_xy = None
             is_tap_xy = False
             for n in range(iter_num):
@@ -242,11 +275,25 @@ class Android_device:
             if click_xy is not None:
                 if no_click == False:
                     #성공한 경우 클릭을 한 후, 새로운 상태를 설정해 준다.
-                    print(f"Img: {search_img}, T_img: {target_img}\n"
+                    print(f"In automation_by_img(), \n"
+                          f"Img: {search_img}, T_img: {target_img}\n"
                           f"Click: {click_xy}(is_tap_xy: {is_tap_xy})")
                     self.click_xy(click_xy, is_device_xy=is_tap_xy)
                 if new_status is not None:
-                    print(f'prev status: {self.status}, new status:{new_status}')
-                    self.status = new_status
+                    print(f'setting new status:{new_status}, prev status: {self.cur_status}')
+                    self.prev_status = self.cur_status
+                    self.cur_status = new_status
+                    #confidence를 원래대로
+                if confidence != 1:
+                    self.confidence = prev_confidence
                 return True
+        if confidence != 1:
+            self.confidence = prev_confidence
         return False
+    # def standard_automation_by_image(self, automation:list, cur_status=None, new_status=None, no_click=False, confidence=1):
+    #     """
+    #     status_와 cmd_라는 파일명을 가진 이미지를 통한 automation
+    #     :param automation:
+    #     :return: True/False
+    #     """
+    #     self.automation_by_image()
