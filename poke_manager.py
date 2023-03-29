@@ -171,12 +171,18 @@ class Poke_device(Android_device):
         print(f'Setting Status: {self.status}, prev_status: {self.prev_status}')
     def get_status_by_image(self, status_list:list):
         """
-        status list를 받아와서 현재 화명이 그 상태인지 확인 후, 상태를 변경.
+        status list를 받아와서 현재 화면이 그 상태인지 확인 후, 상태를 변경.
         :param status_list: 상태 문자열 리스트
         :return: 변경하는 상태 문자열
         """
+        # 'status_' 전두어 생략시
+        mod_status_list = []
         for status in status_list:
-            if status.
+            if status.split('_')[0] != 'status':
+                mod_status_list.append('status_' + status)
+            else:
+                mod_status_list.append(status)
+        for status in mod_status_list:
             if self.automation_by_image(status, no_click=True, new_status=status):
                 return status
         return 'none'
@@ -281,7 +287,7 @@ class Poke_device(Android_device):
         status_list = [
             'status_initial_screen', 'status_profile_me', 'status_profile_friend_interact',
             'status_exchange_pokemon_list', 'status_exchange_next', 'status_exchange_confirm',
-            'status_exchange_result_pokemon'
+            'status_exchange_result_pokemon', 'status_exchange_goodfriend'
         ]
         #명령딕셔너리. 나중에 자동생성하면 좋을 듯
         cmd_dict = {
@@ -301,6 +307,8 @@ class Poke_device(Android_device):
             self.automation_by_image('cond_exchange_100_cost', 'cmd_exchange_confirm', cur_status='status_exchange_confirm', new_status='status_exchange_result_pokemon')
             self.automation_by_image('status_exchange_result_pokemon', 'cmd_exchange_result_pokemon', cur_status='status_exchange_result_pokemon', new_status='status_profile_friend_interact')
             self.automation_by_image('status_profile_friend_interact', 'cmd_profile_friend_interact_exchange', cur_status='status_profile_friend_interact', new_status='status_exchange_pokemon_list')
+            self.automation_by_image('status_exchange_goodfriend', 'cmd_exchange_goodfriend', cur_status='status_profile_friend_interact', new_status='status_profile_friend_interact')
+
             if self.prev_status == self.cur_status:
                 status = self.get_status_by_image(status_list)
                 self.prev_status = self.cur_status
